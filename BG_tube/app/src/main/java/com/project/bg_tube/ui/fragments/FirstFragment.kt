@@ -5,28 +5,46 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import androidx.navigation.fragment.findNavController
-import com.project.bg_tube.R
+import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.project.bg_tube.databinding.FragmentFirstBinding
+import com.project.bg_tube.ui.adapters.FragmentAdapter
+import com.project.bg_tube.ui.adapters.listener.OnItemClickListener
+import com.project.bg_tube.ui.viewmodel.MainViewModel
+import kotlinx.android.synthetic.main.bg_tube_service.*
 
-/**
- * A simple [Fragment] subclass as the default destination in the navigation.
- */
+
 class FirstFragment : Fragment() {
+
+    var homeFragmentBinding : FragmentFirstBinding ?= null
+    var adapterView : FragmentAdapter ?= null
+    var mainViewModel : MainViewModel ?= null
 
     override fun onCreateView(
             inflater: LayoutInflater, container: ViewGroup?,
             savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_first, container, false)
+        homeFragmentBinding = FragmentFirstBinding.inflate(inflater, container, false)
+
+        return homeFragmentBinding?.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        view.findViewById<Button>(R.id.button_first).setOnClickListener {
-            findNavController().navigate(R.id.action_FirstFragment_to_SecondFragment)
-        }
+        mainViewModel = ViewModelProvider(requireActivity()).get(MainViewModel::class.java)
+        adapterView = FragmentAdapter(requireContext(),  object : OnItemClickListener {
+            override fun OnItemClick(position: Int) {
+
+            }
+        })
+
+        homeFragmentBinding!!.recyclerPlayList.layoutManager = LinearLayoutManager(requireContext())
+        mainViewModel!!.dataAdapter.value = adapterView
+        homeFragmentBinding!!.recyclerPlayList.adapter = adapterView
+
+
+
+
     }
 }

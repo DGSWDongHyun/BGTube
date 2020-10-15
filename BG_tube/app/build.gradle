@@ -12,6 +12,9 @@ android {
         targetSdkVersion 30
         versionCode 1
         versionName "1.0"
+        viewBinding {
+            enabled = true
+        }
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -43,6 +46,10 @@ dependencies {
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
+    implementation group: 'commons-io', name: 'commons-io', version: '2.4'
+    implementation 'com.github.bumptech.glide:glide:4.11.0'
+    annotationProcessor 'com.github.bumptech.glide:compiler:4.11.0'
+    implementation 'com.google.code.gson:gson:2.8.6'
 
     //youtube library
     implementation 'com.pierfrancescosoffritti.androidyoutubeplayer:core:10.0.5'
