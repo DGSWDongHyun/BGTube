@@ -5,8 +5,10 @@ import android.os.StrictMode
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AnimationUtils
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.project.bg_tube.R
@@ -21,6 +23,8 @@ class FragmentAdapter(context: Context, listener: OnItemClickListener) : Recycle
     var listener:OnItemClickListener ?= null
     var list: ArrayList<Playlist>? = null
     var context: Context? = null
+    private var positionCheck = 0
+    private var isStartViewCheck = true
 
     init {
         this.context = context
@@ -52,15 +56,27 @@ class FragmentAdapter(context: Context, listener: OnItemClickListener) : Recycle
     override fun onBindViewHolder(holder: FragmentAdapter.FragmentViewHolder, position: Int) {
         val playing: Playlist? = list?.get(position)
 
+        if (isStartViewCheck) {
+            if (position > 6) isStartViewCheck = false
+        } else {
+            if (position > positionCheck) {
+                holder.viewCard.animation = AnimationUtils.loadAnimation(context, R.anim.fall_down)
+            } else {
+                holder.viewCard.animation = AnimationUtils.loadAnimation(context, R.anim.raise_up)
+            }
+        }
+
         holder.itemView.setOnClickListener {
             listener?.OnItemClick(position);
         }
-
+        
         holder.textTitle?.text = getQuietly(playing?.videoUrl, 1)
-        holder.content_author.text = getQuietly(playing?.videoUrl, 2)
+        holder.contentAuthor.text = getQuietly(playing?.videoUrl, 2)
         Glide.with(context!!.applicationContext).load(getQuietly(playing?.videoUrl, 3)).centerCrop().into(
             holder.thumbnailImage
         )
+        positionCheck = position
+
     }
 
     override fun getItemCount(): Int {
@@ -70,7 +86,8 @@ class FragmentAdapter(context: Context, listener: OnItemClickListener) : Recycle
     class FragmentViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val textTitle: TextView = itemView.findViewById(R.id.title)
         val thumbnailImage: ImageView = itemView.findViewById(R.id.thumbnailImageView)
-        val content_author : TextView = itemView.findViewById(R.id.content_author)
+        val contentAuthor : TextView = itemView.findViewById(R.id.content_author)
+        val viewCard : ConstraintLayout = itemView.findViewById(R.id.viewCard)
     }
 
     fun getQuietly(youtubeUrl: String?, requestCode: Int): String? {
@@ -83,15 +100,21 @@ class FragmentAdapter(context: Context, listener: OnItemClickListener) : Recycle
 
         when(requestCode){
             1 -> {
-                return JSONObject(IOUtils.toString(embededURL)).getString("title")
+                return if(check(embededURL)){ JSONObject(IOUtils.toString(embededURL)).getString("title") } else { "Oops! We got a problem, We cannot parse that video. sorry." }
             }
             2 -> {
-                return JSONObject(IOUtils.toString(embededURL)).getString("author_name")
+                return if(check(embededURL)){ JSONObject(IOUtils.toString(embededURL)).getString("author_name") } else { "no data" }
             }
             3 -> {
-                return JSONObject(IOUtils.toString(embededURL)).getString("thumbnail_url")
+                return return if(check(embededURL)){ JSONObject(IOUtils.toString(embededURL)).getString("thumbnail_url") } else { "no data" }
             }
         }
         return null
+    }
+    fun check(urlTube : URL) : Boolean{
+        if(IOUtils.toString(urlTube) == "Unauthorized"){
+                return false
+        }
+        return true
     }
 }
