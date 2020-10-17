@@ -2,6 +2,7 @@ package com.project.bg_tube.ui.activites
 
 import android.annotation.TargetApi
 import android.app.ActivityManager
+import android.app.NotificationManager
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
@@ -25,6 +26,9 @@ import com.project.bg_tube.data.request.Playlist
 import com.project.bg_tube.ui.adapters.FragmentAdapter
 import com.project.bg_tube.ui.services.BGTubeService
 import com.project.bg_tube.ui.viewmodel.MainViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.apache.commons.io.IOUtils
 import java.io.FileNotFoundException
 import java.lang.reflect.Type
@@ -45,30 +49,32 @@ class MainActivity : AppCompatActivity() {
 
         checkPermission()
         mainViewModel = ViewModelProvider(this).get(MainViewModel::class.java)
-        fragmentAdapter = mainViewModel?.dataAdapter?.value
 
-
-        mainViewModel?.dataAdapter?.value = fragmentAdapter
-
+        GlobalScope.launch (Dispatchers.Main) {
+            fragmentAdapter = mainViewModel?.dataAdapter?.value
+            mainViewModel?.dataAdapter?.value = fragmentAdapter
+        }
 
         findViewById<FloatingActionButton>(R.id.fab).setOnClickListener { view ->
-            if(mainViewModel?.dataAdapter?.value == null){
-                Log.d("null", "null")
-            }else{
-                fragmentAdapter = mainViewModel?.dataAdapter?.value
-                Log.d("added", "added")
-                makeAlert()
-
-                list = mainViewModel?.dataAdapter?.value!!.getData()
+            GlobalScope.launch (Dispatchers.Main) {
+                if(mainViewModel?.dataAdapter?.value == null){
+                }else{
+                    fragmentAdapter = mainViewModel?.dataAdapter?.value
+                    makeAlert()
+                    list = mainViewModel?.dataAdapter?.value!!.getData()
 
 
+                }
             }
         }
+
     }
     private fun isServiceRunningCheck(): Boolean {
         val manager = this.getSystemService(ACTIVITY_SERVICE) as ActivityManager
         for (service in manager.getRunningServices(Int.MAX_VALUE)) {
             if ("com.project.bg_tube.ui.services.BGTubeService" == service.service.className) {
+                val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+                notificationManager.cancel(123)
                 return true
             }
         }
@@ -93,8 +99,10 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("확인") { dialogInterface, i ->
                 if(Pattern.matches(string_regex, editText.text.toString())){
                     try{
-                        list?.add(Playlist(editText.text.toString()))
-                        mainViewModel?.dataAdapter?.value!!.setData(list!!)
+                        GlobalScope.launch(Dispatchers.Main) {
+                            list?.add(Playlist(editText.text.toString()))
+                            mainViewModel?.dataAdapter?.value!!.setData(list!!)
+                        }
                     }catch (e : FileNotFoundException){
                         Log.d("null", e.message.toString())
                     }

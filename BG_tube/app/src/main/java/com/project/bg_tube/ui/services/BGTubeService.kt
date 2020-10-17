@@ -53,6 +53,7 @@ class BGTubeService : LifecycleService() {
     private var cardViewLong : CardView ?= null
     private var recyclerPlayList : RecyclerView ?= null
     private var fab : FloatingActionButton ?= null
+    private var intent : Intent ?= null
 
     override fun onBind(intent: Intent): IBinder? {
         return super.onBind(intent)
@@ -221,6 +222,19 @@ class BGTubeService : LifecycleService() {
                     youTubePlayerView.addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
                         override fun onReady(youTubePlayer: YouTubePlayer) {
                             youTubePlayers = youTubePlayer
+
+                            if(intent != null && intent!!.hasExtra("videoID") && intent!!.hasExtra("secondValue")){
+
+                                cardViewLong!!.visibility = View.GONE;
+                                LongIsViewing = false
+
+                                cardViewGround!!.visibility = View.VISIBLE
+                                isViewing = true
+
+
+                                youTubePlayers?.loadVideo(intent?.getStringExtra("videoID").toString(),
+                                    intent?.getFloatExtra("secondValue", 0F)!!.toFloat())
+                            }
                         }
                     })
 
@@ -232,15 +246,9 @@ class BGTubeService : LifecycleService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
 
         super.onStartCommand(intent, flags, startId)
-
         if(intent!!.hasExtra("videoID")){
             Log.d("ResultOfHasExtra", intent?.getStringExtra("videoID").toString());
-
-            youTubePlayers?.loadVideo(intent?.getStringExtra("videoID").toString(),
-                intent?.getFloatExtra("secondValue", 0F).toFloat())
-            
-        }else{
-            Log.d("ResultOfHasExtra", "No-Extras On Here");
+            this.intent = intent
         }
         return START_REDELIVER_INTENT
     }

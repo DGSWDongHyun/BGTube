@@ -2,6 +2,7 @@ package com.project.bg_tube.ui.adapters
 
 import android.content.Context
 import android.os.StrictMode
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,8 +15,13 @@ import com.bumptech.glide.Glide
 import com.project.bg_tube.R
 import com.project.bg_tube.data.request.Playlist
 import com.project.bg_tube.ui.adapters.listener.OnItemClickListener
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.apache.commons.io.IOUtils
 import org.json.JSONObject
+import java.io.FileNotFoundException
+import java.lang.reflect.InvocationTargetException
 import java.net.URL
 
 class FragmentAdapter(context: Context, listener: OnItemClickListener) : RecyclerView.Adapter<FragmentAdapter.FragmentViewHolder>() {
@@ -56,27 +62,28 @@ class FragmentAdapter(context: Context, listener: OnItemClickListener) : Recycle
     override fun onBindViewHolder(holder: FragmentAdapter.FragmentViewHolder, position: Int) {
         val playing: Playlist? = list?.get(position)
 
-        if (isStartViewCheck) {
-            if (position > 6) isStartViewCheck = false
-        } else {
-            if (position > positionCheck) {
-                holder.viewCard.animation = AnimationUtils.loadAnimation(context, R.anim.fall_down)
+        GlobalScope.launch(Dispatchers.Main) {
+            if (isStartViewCheck) {
+                if (position > 6) isStartViewCheck = false
             } else {
-                holder.viewCard.animation = AnimationUtils.loadAnimation(context, R.anim.raise_up)
+                if (position > positionCheck) {
+                    holder.viewCard.animation = AnimationUtils.loadAnimation(context, R.anim.fall_down)
+                } else {
+                    holder.viewCard.animation = AnimationUtils.loadAnimation(context, R.anim.raise_up)
+                }
             }
-        }
 
-        holder.itemView.setOnClickListener {
-            listener?.OnItemClick(position);
-        }
-        
-        holder.textTitle?.text = getQuietly(playing?.videoUrl, 1)
-        holder.contentAuthor.text = getQuietly(playing?.videoUrl, 2)
-        Glide.with(context!!.applicationContext).load(getQuietly(playing?.videoUrl, 3)).centerCrop().into(
-            holder.thumbnailImage
-        )
-        positionCheck = position
+            holder.itemView.setOnClickListener {
+                listener?.OnItemClick(position);
+            }
 
+            holder.textTitle?.text = getQuietly(playing?.videoUrl, 1)
+            holder.contentAuthor.text = getQuietly(playing?.videoUrl, 2)
+            Glide.with(context!!.applicationContext).load(getQuietly(playing?.videoUrl, 3)).centerCrop().into(
+                holder.thumbnailImage
+            )
+            positionCheck = position
+        }
     }
 
     override fun getItemCount(): Int {
@@ -112,9 +119,6 @@ class FragmentAdapter(context: Context, listener: OnItemClickListener) : Recycle
         return null
     }
     fun check(urlTube : URL) : Boolean{
-        if(IOUtils.toString(urlTube) == "Unauthorized"){
-                return false
-        }
-        return true
+        return try{ true }catch(e : FileNotFoundException){ false }catch (e : InvocationTargetException) { false }
     }
 }
