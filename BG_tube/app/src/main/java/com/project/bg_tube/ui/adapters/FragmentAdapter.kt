@@ -10,8 +10,10 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.RecyclerView
+import androidx.room.Room
 import com.bumptech.glide.Glide
 import com.project.bg_tube.R
+import com.project.bg_tube.data.database.PlayListDataBase
 import com.project.bg_tube.data.request.PlayList
 import com.project.bg_tube.ui.adapters.listener.OnItemClickListener
 import kotlinx.coroutines.Dispatchers
@@ -63,6 +65,11 @@ class FragmentAdapter(context: Context, listener: OnItemClickListener) : Recycle
         val playing: PlayList? = list?.get(position)
 
 
+        holder.textTitle?.text = playing!!.title
+        holder.contentAuthor.text = playing!!.author_name
+        Glide.with(context!!.applicationContext).load(playing!!.thumbnail_url).centerCrop().into(holder.thumbnailImage)
+
+
         GlobalScope.async {
             if (isStartViewCheck) {
                 if (position > 6) isStartViewCheck = false
@@ -78,18 +85,17 @@ class FragmentAdapter(context: Context, listener: OnItemClickListener) : Recycle
                 listener?.OnItemClick(position);
             }
 
-            holder.textTitle?.text = getQuietly(playing?.videoUrl, 1)
-            holder.contentAuthor.text = getQuietly(playing?.videoUrl, 2)
-
             positionCheck = position
         }
-        GlobalScope.launch(Dispatchers.Main) {
-            Glide.with(context!!.applicationContext).load(getQuietly(playing?.videoUrl, 3)).centerCrop().into(
-                holder.thumbnailImage
-            )
-        }
     }
+    private fun getListData(): List<PlayList> {
+        val db = Room.databaseBuilder(
+            context!!,
+            PlayListDataBase::class.java, "PlayListDB"
+        ).build()
 
+        return db.playListDAO().getAll()
+    }
     override fun getItemCount(): Int {
         return list?.size ?: 0
     }
@@ -99,30 +105,5 @@ class FragmentAdapter(context: Context, listener: OnItemClickListener) : Recycle
         val thumbnailImage: ImageView = itemView.findViewById(R.id.thumbnailImageView)
         val contentAuthor : TextView = itemView.findViewById(R.id.content_author)
         val viewCard : ConstraintLayout = itemView.findViewById(R.id.viewCard)
-    }
-
-    fun getQuietly(youtubeUrl: String?, requestCode: Int): String? {
-        val policy = StrictMode.ThreadPolicy.Builder().permitAll().build()
-        StrictMode.setThreadPolicy(policy)
-
-        var embededURL : URL? = null
-
-        embededURL = URL("http://www.youtube.com/oembed?url=$youtubeUrl&format=json")
-
-        when(requestCode){
-            1 -> {
-                return if(check(embededURL)){ JSONObject(IOUtils.toString(embededURL)).getString("title") } else { "Oops! We got a problem, We cannot parse that video. sorry." }
-            }
-            2 -> {
-                return if(check(embededURL)){ JSONObject(IOUtils.toString(embededURL)).getString("author_name") } else { "no data" }
-            }
-            3 -> {
-                return return if(check(embededURL)){ JSONObject(IOUtils.toString(embededURL)).getString("thumbnail_url") } else { "no data" }
-            }
-        }
-        return null
-    }
-    fun check(urlTube : URL) : Boolean{
-        return try{ true }catch(e : FileNotFoundException){ false }catch (e : InvocationTargetException) { false }
     }
 }

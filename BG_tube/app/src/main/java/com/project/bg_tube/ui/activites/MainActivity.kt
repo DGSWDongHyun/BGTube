@@ -9,6 +9,7 @@ import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.StrictMode
 import android.preference.PreferenceManager
 import android.provider.Settings
 import android.util.Log
@@ -30,7 +31,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import org.apache.commons.io.IOUtils
+import org.json.JSONObject
 import java.io.FileNotFoundException
+import java.lang.reflect.InvocationTargetException
+import java.net.URL
 import java.util.regex.Pattern
 
 
@@ -102,14 +107,15 @@ class MainActivity : AppCompatActivity() {
                 if(Pattern.matches(string_regex, editText.text.toString())){
                     try{
                         GlobalScope.launch(Dispatchers.Main) {
-
-                            list?.add(PlayList(0,editText.text.toString()))
+                            var url = editText.text.toString()
+                            list?.add(PlayList(
+                                (mainViewModel!!.dataAdapter.value?.getData()?.size?.minus(1)) ,url, getQuietly(url, 1), getQuietly(url,3), getQuietly(url,2)))
                             mainViewModel?.dataAdapter?.value!!.setData(list!!)
 
 
                             GlobalScope.async {
                                 PlayListDataBase.getInstance(applicationContext!!)?.playListDAO()?.insertAll(PlayList(
-                                    (mainViewModel!!.dataAdapter.value?.getData()?.size?.minus(1)) ,editText.text.toString()))
+                                    (mainViewModel!!.dataAdapter.value?.getData()?.size?.minus(1)) ,url, getQuietly(url, 1), getQuietly(url,3), getQuietly(url,2)))
                             }.await()
 
                         }
@@ -139,7 +145,30 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+    fun getQuietly(youtubeUrl: String?, requestCode: Int): String? {
+        val policy = StrictMode.ThreadPolicy.Builder().permitAll().build()
+        StrictMode.setThreadPolicy(policy)
 
+        var embededURL : URL? = null
+
+        embededURL = URL("http://www.youtube.com/oembed?url=$youtubeUrl&format=json")
+
+        when(requestCode){
+            1 -> {
+                return if(check(embededURL)){ JSONObject(IOUtils.toString(embededURL)).getString("title") } else { "Oops! We got a problem, We cannot parse that video. sorry." }
+            }
+            2 -> {
+                return if(check(embededURL)){ JSONObject(IOUtils.toString(embededURL)).getString("author_name") } else { "no data" }
+            }
+            3 -> {
+                return return if(check(embededURL)){ JSONObject(IOUtils.toString(embededURL)).getString("thumbnail_url") } else { "no data" }
+            }
+        }
+        return null
+    }
+    fun check(urlTube : URL) : Boolean{
+        return try{ true }catch(e : FileNotFoundException){ false }catch (e : InvocationTargetException) { false }
+    }
     @TargetApi(Build.VERSION_CODES.M)
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)

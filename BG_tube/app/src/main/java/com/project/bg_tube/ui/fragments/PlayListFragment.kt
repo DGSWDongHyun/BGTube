@@ -65,7 +65,7 @@ class PlayListFragment : Fragment() {
 
 
     }
-    private suspend fun getListData(): List<PlayList>? {
+    private fun getListData(): List<PlayList>? {
         val db = Room.databaseBuilder(
             requireContext(),
             PlayListDataBase::class.java, "PlayListDB"
