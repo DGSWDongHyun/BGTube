@@ -1,6 +1,7 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
+apply plugin: 'kotlin-kapt'
 
 android {
     compileSdkVersion 30
@@ -63,5 +64,15 @@ dependencies {
     //lifecycle service
     implementation "androidx.lifecycle:lifecycle-service:2.2.0"
     //lifecycle service
+
+    //room
+    def room_version = "2.2.5"
+    //for debug
+    debugImplementation 'com.amitshekhar.android:debug-db:1.0.6'
+    //for debug
+    implementation "androidx.room:room-ktx:$room_version"
+    implementation "androidx.room:room-runtime:$room_version"
+    kapt "androidx.room:room-compiler:$room_version"
+    //room
 
 }

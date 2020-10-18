@@ -2,7 +2,6 @@ package com.project.bg_tube.ui.adapters
 
 import android.content.Context
 import android.os.StrictMode
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -13,10 +12,11 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.project.bg_tube.R
-import com.project.bg_tube.data.request.Playlist
+import com.project.bg_tube.data.request.PlayList
 import com.project.bg_tube.ui.adapters.listener.OnItemClickListener
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import org.apache.commons.io.IOUtils
 import org.json.JSONObject
@@ -27,7 +27,7 @@ import java.net.URL
 class FragmentAdapter(context: Context, listener: OnItemClickListener) : RecyclerView.Adapter<FragmentAdapter.FragmentViewHolder>() {
 
     var listener:OnItemClickListener ?= null
-    var list: ArrayList<Playlist>? = null
+    var list: ArrayList<PlayList>? = null
     var context: Context? = null
     private var positionCheck = 0
     private var isStartViewCheck = true
@@ -39,11 +39,11 @@ class FragmentAdapter(context: Context, listener: OnItemClickListener) : Recycle
 
 
 
-    fun setData(list: ArrayList<Playlist>) {
+    fun setData(list: ArrayList<PlayList>) {
         this.list = list
         notifyDataSetChanged()
     }
-    fun getData() : ArrayList<Playlist> {
+    fun getData() : ArrayList<PlayList> {
         return if(list != null) {list!!} else{ArrayList()
         }
     }
@@ -60,9 +60,10 @@ class FragmentAdapter(context: Context, listener: OnItemClickListener) : Recycle
     }
 
     override fun onBindViewHolder(holder: FragmentAdapter.FragmentViewHolder, position: Int) {
-        val playing: Playlist? = list?.get(position)
+        val playing: PlayList? = list?.get(position)
 
-        GlobalScope.launch(Dispatchers.Main) {
+
+        GlobalScope.async {
             if (isStartViewCheck) {
                 if (position > 6) isStartViewCheck = false
             } else {
@@ -79,10 +80,13 @@ class FragmentAdapter(context: Context, listener: OnItemClickListener) : Recycle
 
             holder.textTitle?.text = getQuietly(playing?.videoUrl, 1)
             holder.contentAuthor.text = getQuietly(playing?.videoUrl, 2)
+
+            positionCheck = position
+        }
+        GlobalScope.launch(Dispatchers.Main) {
             Glide.with(context!!.applicationContext).load(getQuietly(playing?.videoUrl, 3)).centerCrop().into(
                 holder.thumbnailImage
             )
-            positionCheck = position
         }
     }
 

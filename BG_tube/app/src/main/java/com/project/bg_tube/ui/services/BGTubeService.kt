@@ -17,6 +17,7 @@ import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.room.Room
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
@@ -25,7 +26,8 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.Abs
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.YouTubePlayerListener
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 import com.project.bg_tube.R
-import com.project.bg_tube.data.request.Playlist
+import com.project.bg_tube.data.database.PlayListDataBase
+import com.project.bg_tube.data.request.PlayList
 import com.project.bg_tube.ui.activites.youtube.DetailActivity
 import com.project.bg_tube.ui.adapters.FragmentAdapter
 import com.project.bg_tube.ui.adapters.listener.OnItemClickListener
@@ -35,7 +37,6 @@ import org.apache.commons.io.IOUtils
 import org.json.JSONObject
 import java.lang.reflect.Type
 import java.net.URL
-import kotlin.coroutines.coroutineContext
 
 
 class BGTubeService : LifecycleService() {
@@ -43,7 +44,7 @@ class BGTubeService : LifecycleService() {
     private var LongIsViewing = false;
     private var wm : WindowManager ?= null
     private var mView : View ?= null
-    private var playList : ArrayList<Playlist> ?= arrayListOf()
+    private var playList : ArrayList<PlayList> ?= arrayListOf()
     private var serviceAdapter : FragmentAdapter ?= null
     private var youTubePlayers : YouTubePlayer ?= null
     private var notificationManager : NotificationManager ?= null
@@ -102,7 +103,7 @@ class BGTubeService : LifecycleService() {
                     youTubePlayers?.loadVideo(
                         playList?.get(position)?.videoUrl!!.substring(
                             32,
-                            playList!![position].videoUrl.length
+                            playList!![position].videoUrl!!.length
                         ), 0F
                     )
                     notificationManager!!.cancel(123)
@@ -150,14 +151,16 @@ class BGTubeService : LifecycleService() {
                     lifecycle.addObserver(youTubePlayerView)
 
                     youTubePlayerView.addYouTubePlayerListener(listener_youtube)
-
-                    playList = getListData()
                     notificationBuild("Nothing.")
 
                     fab = mView!!.findViewById(R.id.customFABL)
                     cardViewGround = mView!!.findViewById(R.id.cardViewGround)
                     cardViewLong = mView!!.findViewById(R.id.cardList)
                     recyclerPlayList = mView!!.findViewById(R.id.playListService)
+
+                    GlobalScope.async {
+                        playList = getListData() as ArrayList<PlayList>
+                    }.await()
 
                     cardViewGround!!.setOnClickListener {
                         val intent = Intent(applicationContext, DetailActivity::class.java)
@@ -173,7 +176,7 @@ class BGTubeService : LifecycleService() {
                             youTubePlayers?.loadVideo(
                                 playList?.get(position)?.videoUrl!!.substring(
                                     32,
-                                    playList!![position].videoUrl.length
+                                    playList!![position].videoUrl!!.length
                                 ), 0F
                             )
                             cardViewLong!!.visibility = View.GONE;
@@ -194,8 +197,6 @@ class BGTubeService : LifecycleService() {
                     serviceAdapter?.setData(playList!!)
                     recyclerPlayList!!.adapter = serviceAdapter
 
-                    checkList()
-
 
                     val listener = View.OnLongClickListener {
                         if (LongIsViewing) {
@@ -209,6 +210,7 @@ class BGTubeService : LifecycleService() {
                     }
 
                     fab!!.setOnClickListener {
+                        Log.d("clicked", "c")
                         if (isViewing) {
                             cardViewGround!!.visibility = View.GONE
                             isViewing = false
@@ -291,22 +293,13 @@ class BGTubeService : LifecycleService() {
         notificationManager!!.notify(123, notificationBuilder.build())
     }
 
-    fun checkList(){
-        val nothingLayout : LinearLayout = mView!!.findViewById(R.id.nothingLayout)
-        if(getListData() != null){
-            nothingLayout.visibility = View.INVISIBLE
-        }else{
-            nothingLayout.visibility = View.VISIBLE
-        }
-    }
-    private fun getListData(): ArrayList<Playlist>? {
+    private fun getListData(): List<PlayList> {
+        val db = Room.databaseBuilder(
+            applicationContext,
+            PlayListDataBase::class.java, "PlayListDB"
+        ).build()
 
-        val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        val gson = Gson()
-        val json = sharedPrefs.getString("Playlist", null)
-        val type: Type = object : TypeToken<ArrayList<Playlist?>?>() {}.type
-
-        return gson.fromJson(json, type)
+        return db.playListDAO().getAll()
     }
     private fun getSystemSDK() : Int {
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){

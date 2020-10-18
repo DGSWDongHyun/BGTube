@@ -3,6 +3,7 @@ package com.project.bg_tube.ui.activites
 import android.annotation.TargetApi
 import android.app.ActivityManager
 import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
@@ -11,41 +12,42 @@ import android.os.Bundle
 import android.preference.PreferenceManager
 import android.provider.Settings
 import android.util.Log
-import android.view.View
 import android.widget.EditText
-import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
+import androidx.room.Room
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.project.bg_tube.R
-import com.project.bg_tube.data.request.Playlist
+import com.project.bg_tube.data.database.PlayListDataBase
+import com.project.bg_tube.data.request.PlayList
 import com.project.bg_tube.ui.adapters.FragmentAdapter
 import com.project.bg_tube.ui.services.BGTubeService
 import com.project.bg_tube.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import org.apache.commons.io.IOUtils
 import java.io.FileNotFoundException
-import java.lang.reflect.Type
-import java.net.URL
 import java.util.regex.Pattern
 
 
 class MainActivity : AppCompatActivity() {
 
+    private var databaseP : PlayListDataBase ?= null
     private var mainViewModel : MainViewModel ?= null
     private val ACTION_MANAGE_OVERLAY_PERMISSION_REQUEST_CODE : Int = 1
     private var fragmentAdapter : FragmentAdapter ?= null
-    private var list : ArrayList<Playlist> ?= arrayListOf()
+    private var list : ArrayList<PlayList> ?= arrayListOf()
     private val string_regex : String = "[https:]+\\:+\\/+[www]+\\.+[youtube]+\\.+[com]+\\/+[ watch ]+\\?+[v]+\\=+[a-z A-Z 0-9 _ \\- ? !]+"
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+
+        databaseP = PlayListDataBase.getInstance(this)
 
         checkPermission()
         mainViewModel = ViewModelProvider(this).get(MainViewModel::class.java)
@@ -100,8 +102,16 @@ class MainActivity : AppCompatActivity() {
                 if(Pattern.matches(string_regex, editText.text.toString())){
                     try{
                         GlobalScope.launch(Dispatchers.Main) {
-                            list?.add(Playlist(editText.text.toString()))
+
+                            list?.add(PlayList(0,editText.text.toString()))
                             mainViewModel?.dataAdapter?.value!!.setData(list!!)
+
+
+                            GlobalScope.async {
+                                PlayListDataBase.getInstance(applicationContext!!)?.playListDAO()?.insertAll(PlayList(
+                                    (mainViewModel!!.dataAdapter.value?.getData()?.size?.minus(1)) ,editText.text.toString()))
+                            }.await()
+
                         }
                     }catch (e : FileNotFoundException){
                         Log.d("null", e.message.toString())
@@ -115,7 +125,6 @@ class MainActivity : AppCompatActivity() {
             }.show()
     }
     override fun onDestroy() {
-        saveListData(mainViewModel?.dataAdapter?.value!!.getData())
         startService(Intent(this, BGTubeService::class.java))
         super.onDestroy()
     }
@@ -139,13 +148,5 @@ class MainActivity : AppCompatActivity() {
                 // TODO 동의를 얻지 못했을 경우의 처리
             }
         }
-    }
-    private fun saveListData(playlist: ArrayList<Playlist>) {
-        val preferences = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        val editor: SharedPreferences.Editor = preferences.edit()
-        val gson = Gson()
-        val json = gson.toJson(playlist)
-        editor.putString("Playlist", json)
-        editor.commit()
     }
 }
