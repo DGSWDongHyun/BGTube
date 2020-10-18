@@ -5,30 +5,62 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.Window
+import android.view.WindowManager
+import androidx.room.Room
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.YouTubePlayerListener
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 import com.project.bg_tube.R
+import com.project.bg_tube.data.database.PlayListDataBase
+import com.project.bg_tube.data.request.PlayList
 import com.project.bg_tube.ui.services.BGTubeService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 
 class DetailActivity : AppCompatActivity() {
 
+    var title : String ?= null
     var videoId : String ?= null
     var videoLength : Float ?= null
+    var position : Int ?= null
+    private var playList : ArrayList<PlayList> ?= null
+    private var youTubePlayers : YouTubePlayer ?= null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+            WindowManager.LayoutParams.FLAG_FULLSCREEN)
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         setContentView(R.layout.activity_detail)
 
         var intent : Intent = intent
 
         videoId = intent.getStringExtra("valueVideoID")!!.substring(32, intent.getStringExtra("valueVideoID")!!.length)
+        title = intent.getStringExtra("title")
+        position = intent.getIntExtra("position",0);
 
         Log.d("link", intent.getStringExtra("valueVideoID")!!.substring(32,intent.getStringExtra("valueVideoID")!!.length))
         val youTubePlayerView: YouTubePlayerView = findViewById(R.id.youtube_player_view)
         lifecycle.addObserver(youTubePlayerView)
+
+        GlobalScope.launch(Dispatchers.Main) {
+            GlobalScope.async {
+                playList = getListData() as ArrayList<PlayList>
+            }.await()
+            youTubePlayerView.addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
+                override fun onReady(youTubePlayer: YouTubePlayer) {
+                    youTubePlayers = youTubePlayer
+                    youTubePlayer.loadVideo(
+                       playList?.get(position!!)?.videoUrl!!.substring(32, intent.getStringExtra("valueVideoID")!!.length), intent.getFloatExtra("second",0F))
+                }
+            })
+        }
+
+
 
         youTubePlayerView.addYouTubePlayerListener(object : YouTubePlayerListener{
             override fun onApiChange(youTubePlayer: YouTubePlayer) {
@@ -59,6 +91,19 @@ class DetailActivity : AppCompatActivity() {
                 youTubePlayer: YouTubePlayer,
                 state: PlayerConstants.PlayerState
             ) {
+                if (state == PlayerConstants.PlayerState.ENDED) {
+                    if (position!! < playList!!.size - 1) {
+                        position?.plus(1);
+                    } else {
+                        position = 0;
+                    }
+                    youTubePlayers?.loadVideo(
+                        playList?.get(position!!)?.videoUrl!!.substring(
+                            32,
+                            playList!![position!!].videoUrl!!.length
+                        ), 0F
+                    )
+                }
             }
 
             override fun onVideoDuration(youTubePlayer: YouTubePlayer, duration: Float) {
@@ -75,19 +120,20 @@ class DetailActivity : AppCompatActivity() {
 
         })
 
-        youTubePlayerView.addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
-            override fun onReady(youTubePlayer: YouTubePlayer) {
-                youTubePlayer.loadVideo(
-                    intent.getStringExtra("valueVideoID")!!
-                        .substring(32, intent.getStringExtra("valueVideoID")!!.length), intent.getFloatExtra("second",0F))
-            }
-        })
     }
+    private fun getListData(): List<PlayList> {
+        val db = Room.databaseBuilder(
+            applicationContext,
+            PlayListDataBase::class.java, "PlayListDB"
+        ).build()
 
+        return db.playListDAO().getAll()
+    }
     override fun onStop() {
         val intent : Intent = Intent(this, BGTubeService::class.java)
         intent.putExtra("videoID", videoId)
         intent.putExtra("secondValue", videoLength)
+        intent.putExtra("titleValue", title)
         startService(intent)
         finish()
         super.onStop()

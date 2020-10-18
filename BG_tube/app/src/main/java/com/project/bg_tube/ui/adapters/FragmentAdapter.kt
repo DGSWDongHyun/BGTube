@@ -88,14 +88,6 @@ class FragmentAdapter(context: Context, listener: OnItemClickListener) : Recycle
             positionCheck = position
         }
     }
-    private fun getListData(): List<PlayList> {
-        val db = Room.databaseBuilder(
-            context!!,
-            PlayListDataBase::class.java, "PlayListDB"
-        ).build()
-
-        return db.playListDAO().getAll()
-    }
     override fun getItemCount(): Int {
         return list?.size ?: 0
     }

@@ -166,6 +166,8 @@ class BGTubeService : LifecycleService() {
                         val intent = Intent(applicationContext, DetailActivity::class.java)
                         intent.putExtra("valueVideoID", playList?.get(position)?.videoUrl)
                         intent.putExtra("second", floatSecond)
+                        intent.putExtra("position", position)
+                        intent.putExtra("title", playList?.get(position)?.title)
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         startActivity(intent)
                         stopSelf()
@@ -210,7 +212,6 @@ class BGTubeService : LifecycleService() {
                     }
 
                     fab!!.setOnClickListener {
-                        Log.d("clicked", "c")
                         if (isViewing) {
                             cardViewGround!!.visibility = View.GONE
                             isViewing = false
@@ -225,7 +226,7 @@ class BGTubeService : LifecycleService() {
                         override fun onReady(youTubePlayer: YouTubePlayer) {
                             youTubePlayers = youTubePlayer
 
-                            if(intent != null && intent!!.hasExtra("videoID") && intent!!.hasExtra("secondValue")){
+                            if(intent != null && intent!!.hasExtra("videoID") && intent!!.hasExtra("secondValue") && intent!!.hasExtra("titleValue")) {
 
                                 cardViewLong!!.visibility = View.GONE;
                                 LongIsViewing = false
@@ -236,6 +237,9 @@ class BGTubeService : LifecycleService() {
 
                                 youTubePlayers?.loadVideo(intent?.getStringExtra("videoID").toString(),
                                     intent?.getFloatExtra("secondValue", 0F)!!.toFloat())
+
+                                notificationBuild(intent?.getStringExtra("titleValue")!!)
+
                             }
                         }
                     })
