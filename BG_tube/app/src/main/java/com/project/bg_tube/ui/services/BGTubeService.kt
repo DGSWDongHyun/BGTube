@@ -40,6 +40,9 @@ import java.net.URL
 
 
 class BGTubeService : LifecycleService() {
+
+    //initialize service field
+
     private var isViewing = false
     private var LongIsViewing = false;
     private var wm : WindowManager ?= null
@@ -56,201 +59,153 @@ class BGTubeService : LifecycleService() {
     private var fab : FloatingActionButton ?= null
     private var intent : Intent ?= null
 
+    //initialize service field
+
     override fun onBind(intent: Intent): IBinder? {
         return super.onBind(intent)
     }
 
     override fun onCreate() {
         super.onCreate()
-
-        val listener_youtube: YouTubePlayerListener = object : YouTubePlayerListener {
-            override fun onApiChange(youTubePlayer: YouTubePlayer) {
-            }
-
-            override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) {
-                floatSecond = second
-            }
-
-            override fun onError(youTubePlayer: YouTubePlayer, error: PlayerConstants.PlayerError) {
-            }
-
-            override fun onPlaybackQualityChange(
-                youTubePlayer: YouTubePlayer,
-                playbackQuality: PlayerConstants.PlaybackQuality
-            ) {
-
-            }
-
-            override fun onPlaybackRateChange(
-                youTubePlayer: YouTubePlayer,
-                playbackRate: PlayerConstants.PlaybackRate
-            ) {
-            }
-
-            override fun onReady(youTubePlayer: YouTubePlayer) {
-            }
-
-            override fun onStateChange(
-                youTubePlayer: YouTubePlayer,
-                state: PlayerConstants.PlayerState
-            ) {
-                if (state == PlayerConstants.PlayerState.ENDED) {
-                    if (position < playList!!.size - 1) {
-                        position++;
-                    } else {
-                        position = 0;
-                    }
-                    youTubePlayers?.loadVideo(
-                        playList?.get(position)?.videoUrl!!.substring(
-                            32,
-                            playList!![position].videoUrl!!.length
-                        ), 0F
-                    )
-                    notificationManager!!.cancel(123)
-                    getQuietly(
-                        playList?.get(position)?.videoUrl!!,
-                        1
-                    )?.let { notificationBuild(it) }
-                }
-            }
-
-            override fun onVideoDuration(youTubePlayer: YouTubePlayer, duration: Float) {
-            }
-
-            override fun onVideoId(youTubePlayer: YouTubePlayer, videoId: String) {
-            }
-
-            override fun onVideoLoadedFraction(
-                youTubePlayer: YouTubePlayer,
-                loadedFraction: Float
-            ) {
-            }
-
-        }
-
-
         CoroutineScope(Dispatchers.Main).launch {
                 async {
-                    val inflate = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
-                    wm = getSystemService(WINDOW_SERVICE) as WindowManager
-
-                    val params = WindowManager.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        getSystemSDK(),
-                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                                or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-                                or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
-                        PixelFormat.TRANSLUCENT
-                    )
-
-                    params.gravity = Gravity.RIGHT or Gravity.TOP
-                    mView = inflate.inflate(R.layout.bg_tube_service, null)
-
-                    val youTubePlayerView: YouTubePlayerView = mView!!.findViewById(R.id.youtube_player_view)
-                    lifecycle.addObserver(youTubePlayerView)
-
-                    youTubePlayerView.addYouTubePlayerListener(listener_youtube)
-                    notificationBuild("Nothing.")
-
-                    fab = mView!!.findViewById(R.id.customFABL)
-                    cardViewGround = mView!!.findViewById(R.id.cardViewGround)
-                    cardViewLong = mView!!.findViewById(R.id.cardList)
-                    recyclerPlayList = mView!!.findViewById(R.id.playListService)
-
-                    GlobalScope.async {
-                        playList = getListData() as ArrayList<PlayList>
-                    }.await()
-
-                    cardViewGround!!.setOnClickListener {
-                        val intent = Intent(applicationContext, DetailActivity::class.java)
-                        intent.putExtra("valueVideoID", playList?.get(position)?.videoUrl)
-                        intent.putExtra("second", floatSecond)
-                        intent.putExtra("position", position)
-                        intent.putExtra("title", playList?.get(position)?.title)
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        startActivity(intent)
-                        stopSelf()
-                    }
-                    serviceAdapter = FragmentAdapter(applicationContext, object : OnItemClickListener {
-                        override fun OnItemClick(position: Int) {
-                            this@BGTubeService.position = position
-                            youTubePlayers?.loadVideo(
-                                playList?.get(position)?.videoUrl!!.substring(
-                                    32,
-                                    playList!![position].videoUrl!!.length
-                                ), 0F
-                            )
-                            cardViewLong!!.visibility = View.GONE;
-                            LongIsViewing = false
-
-                            cardViewGround!!.visibility = View.VISIBLE
-                            isViewing = true
-                            notificationManager!!.cancel(123)
-                            getQuietly(
-                                playList!![position].videoUrl.toString(),
-                                1
-                            )?.let { notificationBuild(it) }
-                        }
-                    })
-
-                    recyclerPlayList!!.layoutManager = LinearLayoutManager(applicationContext)
-
-                    serviceAdapter?.setData(playList!!)
-                    recyclerPlayList!!.adapter = serviceAdapter
-
-
-                    val listener = View.OnLongClickListener {
-                        if (LongIsViewing) {
-                            cardViewLong!!.visibility = View.GONE
-                            LongIsViewing = false
-                        } else if (!LongIsViewing && !isViewing) {
-                            cardViewLong!!.visibility = View.VISIBLE
-                            LongIsViewing = true
-                        }
-                        true
-                    }
-
-                    fab!!.setOnClickListener {
-                        if (isViewing) {
-                            cardViewGround!!.visibility = View.GONE
-                            isViewing = false
-                        } else if (!LongIsViewing && !isViewing) {
-                            cardViewGround!!.visibility = View.VISIBLE
-                            isViewing = true
-                        }
-                    }
-
-                    fab!!.setOnLongClickListener(listener)
-                    youTubePlayerView.addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
-                        override fun onReady(youTubePlayer: YouTubePlayer) {
-                            youTubePlayers = youTubePlayer
-
-                            if(intent != null && intent!!.hasExtra("videoID") && intent!!.hasExtra("secondValue") && intent!!.hasExtra("titleValue")) {
-
-                                cardViewLong!!.visibility = View.GONE;
-                                LongIsViewing = false
-
-                                cardViewGround!!.visibility = View.VISIBLE
-                                isViewing = true
-
-
-                                youTubePlayers?.loadVideo(intent?.getStringExtra("videoID").toString(),
-                                    intent?.getFloatExtra("secondValue", 0F)!!.toFloat())
-
-                                notificationBuild(intent?.getStringExtra("titleValue")!!)
-
-                            }
-                        }
-                    })
-
-                    wm!!.addView(mView, params)
+                    new_Windows()
                 }.await()
         }
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    private suspend fun new_Windows(){
+        val inflate = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
+        wm = getSystemService(WINDOW_SERVICE) as WindowManager
 
+        val params = WindowManager.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            getSystemSDK(),
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                    or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                    or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+            PixelFormat.TRANSLUCENT
+        )
+
+        params.gravity = Gravity.RIGHT or Gravity.TOP
+        mView = inflate.inflate(R.layout.bg_tube_service, null)
+
+        val youTubePlayerView: YouTubePlayerView = mView!!.findViewById(R.id.youtube_player_view)
+        lifecycle.addObserver(youTubePlayerView)
+
+        youTubePlayerView.addYouTubePlayerListener(object : YouTubePlayerListener {
+            override fun onApiChange(youTubePlayer: YouTubePlayer) {}
+            override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) { floatSecond = second }
+            override fun onError(youTubePlayer: YouTubePlayer, error: PlayerConstants.PlayerError) {}
+            override fun onPlaybackQualityChange(youTubePlayer: YouTubePlayer, playbackQuality: PlayerConstants.PlaybackQuality) {}
+            override fun onPlaybackRateChange(youTubePlayer: YouTubePlayer, playbackRate: PlayerConstants.PlaybackRate) {}
+            override fun onReady(youTubePlayer: YouTubePlayer) {}
+            override fun onStateChange(youTubePlayer: YouTubePlayer, state: PlayerConstants.PlayerState) {
+                if (state == PlayerConstants.PlayerState.ENDED) {
+
+                    if (position < playList!!.size - 1) { position++; } else { position = 0; }
+
+                    youTubePlayers?.loadVideo(playList?.get(position)?.videoUrl!!.substring( 32, playList!![position].videoUrl!!.length), 0F)
+                    notificationManager!!.cancel(123)
+                    getQuietly(playList?.get(position)?.videoUrl!!, 1)?.let { notificationBuild(it) }
+                }
+            }
+            override fun onVideoDuration(youTubePlayer: YouTubePlayer, duration: Float) {}
+            override fun onVideoId(youTubePlayer: YouTubePlayer, videoId: String) {}
+            override fun onVideoLoadedFraction(youTubePlayer: YouTubePlayer, loadedFraction: Float) {}
+        })
+
+        notificationBuild("Nothing.")
+
+        fab = mView!!.findViewById(R.id.customFABL)
+        cardViewGround = mView!!.findViewById(R.id.cardViewGround)
+        cardViewLong = mView!!.findViewById(R.id.cardList)
+        recyclerPlayList = mView!!.findViewById(R.id.playListService)
+
+        GlobalScope.async {
+            playList = getListData() as ArrayList<PlayList>
+        }.await()
+
+        cardViewGround!!.setOnClickListener {
+            val intent = Intent(applicationContext, DetailActivity::class.java)
+            intent.putExtra("valueVideoID", playList?.get(position)?.videoUrl)
+            intent.putExtra("second", floatSecond)
+            intent.putExtra("position", position)
+            intent.putExtra("title", playList?.get(position)?.title)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent)
+            stopSelf()
+        }
+        serviceAdapter = FragmentAdapter(applicationContext, object : OnItemClickListener {
+            override fun OnItemClick(position: Int) {
+                this@BGTubeService.position = position
+                youTubePlayers?.loadVideo(
+                    playList?.get(position)?.videoUrl!!.substring(
+                        32,
+                        playList!![position].videoUrl!!.length
+                    ), 0F
+                )
+                cardViewLong!!.visibility = View.GONE;
+                LongIsViewing = false
+
+                cardViewGround!!.visibility = View.VISIBLE
+                isViewing = true
+                notificationManager!!.cancel(123)
+                getQuietly(
+                    playList!![position].videoUrl.toString(),
+                    1
+                )?.let { notificationBuild(it) }
+            }
+        })
+
+        recyclerPlayList!!.layoutManager = LinearLayoutManager(applicationContext)
+
+        serviceAdapter?.setData(playList!!)
+        recyclerPlayList!!.adapter = serviceAdapter
+
+
+        val listener = View.OnLongClickListener {
+            if (LongIsViewing) {
+                cardViewLong!!.visibility = View.GONE
+                LongIsViewing = false
+            } else if (!LongIsViewing && !isViewing) {
+                cardViewLong!!.visibility = View.VISIBLE
+                LongIsViewing = true
+            }
+            true
+        }
+
+        fab!!.setOnClickListener {
+            if (isViewing) {
+                cardViewGround!!.visibility = View.GONE
+                isViewing = false
+            } else if (!LongIsViewing && !isViewing) {
+                cardViewGround!!.visibility = View.VISIBLE
+                isViewing = true
+            }
+        }
+
+        fab!!.setOnLongClickListener(listener)
+        youTubePlayerView.addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
+            override fun onReady(youTubePlayer: YouTubePlayer) {
+                youTubePlayers = youTubePlayer
+                if(intent != null && intent!!.hasExtra("videoID") && intent!!.hasExtra("secondValue") && intent!!.hasExtra("titleValue")) {
+                    cardViewLong!!.visibility = View.GONE;
+                    LongIsViewing = false
+                    cardViewGround!!.visibility = View.VISIBLE
+                    isViewing = true
+                    youTubePlayers?.loadVideo(intent?.getStringExtra("videoID").toString(),
+                        intent?.getFloatExtra("secondValue", 0F)!!.toFloat())
+                    notificationBuild(intent?.getStringExtra("titleValue")!!)
+
+                }
+            }
+        })
+
+        wm!!.addView(mView, params)
+    }
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         if(intent!!.hasExtra("videoID")){
             Log.d("ResultOfHasExtra", intent?.getStringExtra("videoID").toString());
@@ -262,21 +217,12 @@ class BGTubeService : LifecycleService() {
     fun getQuietly(youtubeUrl: String?, requestCode: Int): String? {
         val policy = StrictMode.ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
-
         var embededURL : URL? = null
-
         embededURL = URL("http://www.youtube.com/oembed?url=$youtubeUrl&format=json")
-
         when(requestCode){
-            1 -> {
-                 return JSONObject(IOUtils.toString(embededURL)).getString("title")
-            }
-            2 -> {
-                return JSONObject(IOUtils.toString(embededURL)).getString("author_name")
-            }
-            3 -> {
-                return JSONObject(IOUtils.toString(embededURL)).getString("thumbnail_url")
-            }
+            1 -> { return JSONObject(IOUtils.toString(embededURL)).getString("title") }
+            2 -> { return JSONObject(IOUtils.toString(embededURL)).getString("author_name") }
+            3 -> { return JSONObject(IOUtils.toString(embededURL)).getString("thumbnail_url") }
         }
         return null
     }
@@ -306,11 +252,7 @@ class BGTubeService : LifecycleService() {
         return db.playListDAO().getAll()
     }
     private fun getSystemSDK() : Int {
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
-            return  WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        }else{
-            return  WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
-        }
+        return if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){ WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY }else{ WindowManager.LayoutParams.TYPE_SYSTEM_ALERT }
     }
 
     override fun onDestroy() {

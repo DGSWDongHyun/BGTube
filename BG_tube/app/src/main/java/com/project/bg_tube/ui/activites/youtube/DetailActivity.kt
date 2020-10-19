@@ -17,6 +17,7 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTube
 import com.project.bg_tube.R
 import com.project.bg_tube.data.database.PlayListDataBase
 import com.project.bg_tube.data.request.PlayList
+import com.project.bg_tube.databinding.ActivityDetailBinding
 import com.project.bg_tube.ui.adapters.FragmentAdapter
 import com.project.bg_tube.ui.adapters.listener.OnItemClickListener
 import com.project.bg_tube.ui.services.BGTubeService
@@ -33,7 +34,7 @@ class DetailActivity : AppCompatActivity() {
     var position : Int ?= null
     private var playList : ArrayList<PlayList> ?= null
     private var youTubePlayers : YouTubePlayer ?= null
-    private var recyclerPlayList : RecyclerView ?= null
+    private var bindingDetail : ActivityDetailBinding ?= null
     private var adapter : FragmentAdapter ?= null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,7 +42,8 @@ class DetailActivity : AppCompatActivity() {
         window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
             WindowManager.LayoutParams.FLAG_FULLSCREEN)
         requestWindowFeature(Window.FEATURE_NO_TITLE)
-        setContentView(R.layout.activity_detail)
+        bindingDetail = ActivityDetailBinding.inflate(layoutInflater)
+        setContentView(bindingDetail?.root)
 
         var intent : Intent = intent
 
@@ -58,10 +60,9 @@ class DetailActivity : AppCompatActivity() {
                 playList = getListData() as ArrayList<PlayList>
             }.await()
 
-            recyclerPlayList = findViewById(R.id.recyclerViewPlayLists)
 
-            recyclerPlayList?.layoutManager = LinearLayoutManager(applicationContext)
-            recyclerPlayList?.adapter = adapter
+            bindingDetail?.recyclerViewPlayLists?.layoutManager = LinearLayoutManager(applicationContext)
+            bindingDetail?.recyclerViewPlayLists?.adapter = adapter
             adapter?.setData(playList!!)
 
             youTubePlayerView.addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
@@ -81,34 +82,13 @@ class DetailActivity : AppCompatActivity() {
         })
 
         youTubePlayerView.addYouTubePlayerListener(object : YouTubePlayerListener{
-            override fun onApiChange(youTubePlayer: YouTubePlayer) {
-            }
-            override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) {
-                videoLength = second
-            }
-
-            override fun onError(youTubePlayer: YouTubePlayer, error: PlayerConstants.PlayerError) {
-            }
-
-            override fun onPlaybackQualityChange(
-                youTubePlayer: YouTubePlayer,
-                playbackQuality: PlayerConstants.PlaybackQuality
-            ) {
-            }
-
-            override fun onPlaybackRateChange(
-                youTubePlayer: YouTubePlayer,
-                playbackRate: PlayerConstants.PlaybackRate
-            ) {
-            }
-
-            override fun onReady(youTubePlayer: YouTubePlayer) {
-            }
-
-            override fun onStateChange(
-                youTubePlayer: YouTubePlayer,
-                state: PlayerConstants.PlayerState
-            ) {
+            override fun onApiChange(youTubePlayer: YouTubePlayer) { }
+            override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) { videoLength = second }
+            override fun onError(youTubePlayer: YouTubePlayer, error: PlayerConstants.PlayerError) { }
+            override fun onPlaybackQualityChange(youTubePlayer: YouTubePlayer, playbackQuality: PlayerConstants.PlaybackQuality) { }
+            override fun onPlaybackRateChange(youTubePlayer: YouTubePlayer, playbackRate: PlayerConstants.PlaybackRate) { }
+            override fun onReady(youTubePlayer: YouTubePlayer) { }
+            override fun onStateChange(youTubePlayer: YouTubePlayer, state: PlayerConstants.PlayerState) {
                 if (state == PlayerConstants.PlayerState.ENDED) {
                     if (position!! < playList!!.size - 1) {
                         position?.plus(1);
@@ -123,21 +103,10 @@ class DetailActivity : AppCompatActivity() {
                     )
                 }
             }
-
-            override fun onVideoDuration(youTubePlayer: YouTubePlayer, duration: Float) {
-            }
-
-            override fun onVideoId(youTubePlayer: YouTubePlayer, videoId: String) {
-            }
-
-            override fun onVideoLoadedFraction(
-                youTubePlayer: YouTubePlayer,
-                loadedFraction: Float
-            ) {
-            }
-
+            override fun onVideoDuration(youTubePlayer: YouTubePlayer, duration: Float) { }
+            override fun onVideoId(youTubePlayer: YouTubePlayer, videoId: String) { }
+            override fun onVideoLoadedFraction(youTubePlayer: YouTubePlayer, loadedFraction: Float) {}
         })
-
     }
     private fun getListData(): List<PlayList> {
         val db = Room.databaseBuilder(
