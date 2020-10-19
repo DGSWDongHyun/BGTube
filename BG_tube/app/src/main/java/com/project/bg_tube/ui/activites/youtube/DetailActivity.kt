@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.util.Log
 import android.view.Window
 import android.view.WindowManager
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import androidx.room.Room
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
@@ -15,6 +17,8 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTube
 import com.project.bg_tube.R
 import com.project.bg_tube.data.database.PlayListDataBase
 import com.project.bg_tube.data.request.PlayList
+import com.project.bg_tube.ui.adapters.FragmentAdapter
+import com.project.bg_tube.ui.adapters.listener.OnItemClickListener
 import com.project.bg_tube.ui.services.BGTubeService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -29,6 +33,8 @@ class DetailActivity : AppCompatActivity() {
     var position : Int ?= null
     private var playList : ArrayList<PlayList> ?= null
     private var youTubePlayers : YouTubePlayer ?= null
+    private var recyclerPlayList : RecyclerView ?= null
+    private var adapter : FragmentAdapter ?= null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,16 +57,28 @@ class DetailActivity : AppCompatActivity() {
             GlobalScope.async {
                 playList = getListData() as ArrayList<PlayList>
             }.await()
+
+            recyclerPlayList = findViewById(R.id.recyclerViewPlayLists)
+
+            recyclerPlayList?.layoutManager = LinearLayoutManager(applicationContext)
+            recyclerPlayList?.adapter = adapter
+            adapter?.setData(playList!!)
+
             youTubePlayerView.addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
                 override fun onReady(youTubePlayer: YouTubePlayer) {
                     youTubePlayers = youTubePlayer
                     youTubePlayer.loadVideo(
-                       playList?.get(position!!)?.videoUrl!!.substring(32, intent.getStringExtra("valueVideoID")!!.length), intent.getFloatExtra("second",0F))
+                       playList?.get(position!!)?.videoUrl!!.substring(32, playList?.get(position!!)?.videoUrl!!.length), intent.getFloatExtra("second",0F))
                 }
             })
         }
 
-
+        adapter = FragmentAdapter(applicationContext, object : OnItemClickListener{
+            override fun OnItemClick(position: Int) {
+                youTubePlayers?.loadVideo(
+                    playList?.get(position!!)?.videoUrl!!.substring(32, playList?.get(position!!)?.videoUrl!!.length), 0F)
+            }
+        })
 
         youTubePlayerView.addYouTubePlayerListener(object : YouTubePlayerListener{
             override fun onApiChange(youTubePlayer: YouTubePlayer) {
