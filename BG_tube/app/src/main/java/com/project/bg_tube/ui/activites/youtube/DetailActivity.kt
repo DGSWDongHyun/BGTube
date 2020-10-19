@@ -60,6 +60,11 @@ class DetailActivity : AppCompatActivity() {
                 playList = getListData() as ArrayList<PlayList>
             }.await()
 
+            adapter = FragmentAdapter(applicationContext, object : OnItemClickListener{
+                override fun OnItemClick(position: Int) {
+                    youTubePlayers?.loadVideo(playList?.get(position!!)?.videoUrl!!.substring(32, playList?.get(position!!)?.videoUrl!!.length), 0F)
+                }
+            })
 
             bindingDetail?.recyclerViewPlayLists?.layoutManager = LinearLayoutManager(applicationContext)
             bindingDetail?.recyclerViewPlayLists?.adapter = adapter
@@ -74,12 +79,6 @@ class DetailActivity : AppCompatActivity() {
             })
         }
 
-        adapter = FragmentAdapter(applicationContext, object : OnItemClickListener{
-            override fun OnItemClick(position: Int) {
-                youTubePlayers?.loadVideo(
-                    playList?.get(position!!)?.videoUrl!!.substring(32, playList?.get(position!!)?.videoUrl!!.length), 0F)
-            }
-        })
 
         youTubePlayerView.addYouTubePlayerListener(object : YouTubePlayerListener{
             override fun onApiChange(youTubePlayer: YouTubePlayer) { }
@@ -91,16 +90,11 @@ class DetailActivity : AppCompatActivity() {
             override fun onStateChange(youTubePlayer: YouTubePlayer, state: PlayerConstants.PlayerState) {
                 if (state == PlayerConstants.PlayerState.ENDED) {
                     if (position!! < playList!!.size - 1) {
-                        position?.plus(1);
+                        position = position!!.plus(1)
                     } else {
-                        position = 0;
+                        position = 0
                     }
-                    youTubePlayers?.loadVideo(
-                        playList?.get(position!!)?.videoUrl!!.substring(
-                            32,
-                            playList!![position!!].videoUrl!!.length
-                        ), 0F
-                    )
+                    youTubePlayers?.loadVideo(playList?.get(position!!)?.videoUrl!!.substring(32, playList!![position!!].videoUrl!!.length), 0F)
                 }
             }
             override fun onVideoDuration(youTubePlayer: YouTubePlayer, duration: Float) { }
@@ -111,8 +105,7 @@ class DetailActivity : AppCompatActivity() {
     private fun getListData(): List<PlayList> {
         val db = Room.databaseBuilder(
             applicationContext,
-            PlayListDataBase::class.java, "PlayListDB"
-        ).build()
+            PlayListDataBase::class.java, "PlayListDB").build()
 
         return db.playListDAO().getAll()
     }
