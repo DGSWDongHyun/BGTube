@@ -5,21 +5,17 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
-import android.os.Build
-import android.os.IBinder
-import android.os.StrictMode
-import android.preference.PreferenceManager
+import android.os.*
 import android.util.Log
 import android.view.*
-import android.widget.LinearLayout
+import android.view.animation.Animation
+import android.view.animation.AnimationUtils
 import androidx.cardview.widget.CardView
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.room.Room
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
@@ -35,7 +31,6 @@ import com.robertlevonyan.views.customfloatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.*
 import org.apache.commons.io.IOUtils
 import org.json.JSONObject
-import java.lang.reflect.Type
 import java.net.URL
 
 
@@ -96,24 +91,60 @@ class BGTubeService : LifecycleService() {
 
         youTubePlayerView.addYouTubePlayerListener(object : YouTubePlayerListener {
             override fun onApiChange(youTubePlayer: YouTubePlayer) {}
-            override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) { floatSecond = second }
-            override fun onError(youTubePlayer: YouTubePlayer, error: PlayerConstants.PlayerError) {}
-            override fun onPlaybackQualityChange(youTubePlayer: YouTubePlayer, playbackQuality: PlayerConstants.PlaybackQuality) {}
-            override fun onPlaybackRateChange(youTubePlayer: YouTubePlayer, playbackRate: PlayerConstants.PlaybackRate) {}
+            override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) {
+                floatSecond = second
+            }
+
+            override fun onError(
+                youTubePlayer: YouTubePlayer,
+                error: PlayerConstants.PlayerError
+            ) {
+            }
+
+            override fun onPlaybackQualityChange(
+                youTubePlayer: YouTubePlayer,
+                playbackQuality: PlayerConstants.PlaybackQuality
+            ) {
+            }
+
+            override fun onPlaybackRateChange(
+                youTubePlayer: YouTubePlayer,
+                playbackRate: PlayerConstants.PlaybackRate
+            ) {
+            }
+
             override fun onReady(youTubePlayer: YouTubePlayer) {}
-            override fun onStateChange(youTubePlayer: YouTubePlayer, state: PlayerConstants.PlayerState) {
+            override fun onStateChange(
+                youTubePlayer: YouTubePlayer,
+                state: PlayerConstants.PlayerState
+            ) {
                 if (state == PlayerConstants.PlayerState.ENDED) {
 
-                    if (position < playList!!.size - 1) { position++; } else { position = 0; }
+                    if (position < playList!!.size - 1) {
+                        position++; } else {
+                        position = 0; }
 
-                    youTubePlayers?.loadVideo(playList?.get(position)?.videoUrl!!.substring( 32, playList!![position].videoUrl!!.length), 0F)
+                    youTubePlayers?.loadVideo(
+                        playList?.get(position)?.videoUrl!!.substring(
+                            32,
+                            playList!![position].videoUrl!!.length
+                        ), 0F
+                    )
                     notificationManager!!.cancel(123)
-                    getQuietly(playList?.get(position)?.videoUrl!!, 1)?.let { notificationBuild(it) }
+                    getQuietly(
+                        playList?.get(position)?.videoUrl!!,
+                        1
+                    )?.let { notificationBuild(it) }
                 }
             }
+
             override fun onVideoDuration(youTubePlayer: YouTubePlayer, duration: Float) {}
             override fun onVideoId(youTubePlayer: YouTubePlayer, videoId: String) {}
-            override fun onVideoLoadedFraction(youTubePlayer: YouTubePlayer, loadedFraction: Float) {}
+            override fun onVideoLoadedFraction(
+                youTubePlayer: YouTubePlayer,
+                loadedFraction: Float
+            ) {
+            }
         })
 
         notificationBuild("Nothing.")
@@ -190,20 +221,31 @@ class BGTubeService : LifecycleService() {
         youTubePlayerView.addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
             override fun onReady(youTubePlayer: YouTubePlayer) {
                 youTubePlayers = youTubePlayer
-                if(intent != null && intent!!.hasExtra("videoID") && intent!!.hasExtra("secondValue") && intent!!.hasExtra("titleValue")) {
+                if (intent != null && intent!!.hasExtra("videoID") && intent!!.hasExtra("secondValue") && intent!!.hasExtra(
+                        "titleValue"
+                    )
+                ) {
+                    val animation: Animation = AnimationUtils.loadAnimation(applicationContext, R.anim.visible)
+                    cardViewGround!!.startAnimation(animation)
                     cardViewLong!!.visibility = View.GONE;
                     LongIsViewing = false
                     cardViewGround!!.visibility = View.VISIBLE
                     isViewing = true
-                    youTubePlayers?.loadVideo(intent?.getStringExtra("videoID").toString(),
-                        intent?.getFloatExtra("secondValue", 0F)!!.toFloat())
+                    youTubePlayers?.loadVideo(
+                        intent?.getStringExtra("videoID").toString(),
+                        intent?.getFloatExtra("secondValue", 0F)!!.toFloat()
+                    )
                     notificationBuild(intent?.getStringExtra("titleValue")!!)
 
                 }
             }
         })
 
-        wm!!.addView(mView, params)
+        Handler(Looper.getMainLooper()).postDelayed(java.lang.Runnable {
+            wm!!.addView(mView, params)
+            val animation: Animation = AnimationUtils.loadAnimation(applicationContext, R.anim.visible)
+            mView!!.startAnimation(animation)
+        }, 500)
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
@@ -220,13 +262,19 @@ class BGTubeService : LifecycleService() {
         var embededURL : URL? = null
         embededURL = URL("http://www.youtube.com/oembed?url=$youtubeUrl&format=json")
         when(requestCode){
-            1 -> { return JSONObject(IOUtils.toString(embededURL)).getString("title") }
-            2 -> { return JSONObject(IOUtils.toString(embededURL)).getString("author_name") }
-            3 -> { return JSONObject(IOUtils.toString(embededURL)).getString("thumbnail_url") }
+            1 -> {
+                return JSONObject(IOUtils.toString(embededURL)).getString("title")
+            }
+            2 -> {
+                return JSONObject(IOUtils.toString(embededURL)).getString("author_name")
+            }
+            3 -> {
+                return JSONObject(IOUtils.toString(embededURL)).getString("thumbnail_url")
+            }
         }
         return null
     }
-    fun notificationBuild(strTitle : String){
+    fun notificationBuild(strTitle: String){
         notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         val notificationBuilder = NotificationCompat.Builder(applicationContext, "0")
             .setOngoing(true)
